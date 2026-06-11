@@ -1,0 +1,46 @@
+---
+apiVersion: mcpserver.ansible.com/v1alpha1
+kind: AnsibleMCPServer
+metadata:
+  name: aap-mcp-server
+  namespace: aap-operator
+  labels:
+    app.kubernetes.io/name: aap-mcp-server
+    app.kubernetes.io/part-of: aap
+    app.kubernetes.io/managed-by: aap-operator
+spec:
+  # Required: The URL of your Ansible Automation Platform instance
+  public_base_url: 'https://aap-aap-operator.apps.127.0.0.1.nip.io'
+
+  # Enable MCP tools that support write operations (POST, DELETE, PATCH)
+  allow_write_operations: true
+
+  # Hostname for the MCP server route
+  hostname: 'aap-mcp-aap-operator.apps.127.0.0.1.nip.io'
+
+  # Use OpenShift Routes for ingress (default for MicroShift/OpenShift)
+  ingress_type: Route
+  route_tls_termination_mechanism: Edge
+  route_host: 'aap-mcp-aap-operator.apps.127.0.0.1.nip.io'
+
+  # Service configuration
+  service_type: ClusterIP
+
+  # API deployment configuration
+  api:
+    replicas: 1
+    resource_requirements:
+      requests:
+        cpu: '500m'
+        memory: '512Mi'
+      limits:
+        cpu: '1000m'
+        memory: '1Gi'
+
+  # Image pull configuration
+  image_pull_policy: IfNotPresent
+  image_pull_secrets:
+    - redhat-operators-pull-secret
+
+  # Disable verbose logging in production
+  no_log: true

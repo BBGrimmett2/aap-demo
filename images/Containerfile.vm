@@ -1,0 +1,123 @@
+# =============================================================================
+# aap-lab VM Image — RHEL 9 + MicroShift + Podman
+# =============================================================================
+#
+# Bootable container image for running MicroShift in a VM on macOS via vfkit.
+# Replaces the MINC container nesting approach with a native VM.
+#
+# Build:
+#   ./images/build-vm-image.sh
+#
+# Or manually:
+#   podman build \
+#     -v /etc/pki/entitlement:/etc/pki/entitlement:ro \
+#     -v /etc/rhsm:/etc/rhsm:ro \
+#     --build-arg USHIFT_VER=4.18 \
+#     -t aap-lab-vm:latest \
+#     -f images/Containerfile.vm .
+#
+# Then convert to raw disk:
+#   sudo podman run --rm -it --privileged --pull=newer \
+#     --security-opt label=type:unconfined_t \
+#     -v ./output:/output \
+#     -v /var/lib/containers/storage:/var/lib/containers/storage \
+#     registry.redhat.io/rhel9/bootc-image-builder:latest \
+#     --type raw --local \
+#     localhost/aap-lab-vm:latest
+#
+# =============================================================================
+
+FROM registry.redhat.io/rhel9/rhel-bootc:latest
+
+# MicroShift version (4.18, 4.19, etc.)
+ARG USHIFT_VER=4.18
+
+# ---------------------------------------------------------------------------
+# Install MicroShift + Podman + dependencies
+# ---------------------------------------------------------------------------
+RUN dnf upgrade -y && \
+    dnf config-manager \
+        --set-enabled "rhocp-${USHIFT_VER}-for-rhel-9-$(uname -m)-rpms" \
+        --set-enabled "fast-datapath-for-rhel-9-$(uname -m)-rpms" && \
+    dnf install -y \
+        microshift \
+        microshift-olm \
+        microshift-release-info \
+        openshift-clients \
+        podman \
+        firewalld \
+        jq \
+        nss-tools \
+        openssh-server && \
+    dnf clean all
+
+# ---------------------------------------------------------------------------
+# Enable services
+# ---------------------------------------------------------------------------
+RUN systemctl enable microshift && \
+    systemctl enable podman.socket && \
+    systemctl enable sshd
+
+# ---------------------------------------------------------------------------
+# Firewall configuration (mandatory for MicroShift)
+# ---------------------------------------------------------------------------
+# SSH
+RUN firewall-offline-cmd --zone=public --add-port=22/tcp
+# Kubernetes API
+RUN firewall-offline-cmd --zone=public --add-port=6443/tcp
+# HTTP/HTTPS ingress
+RUN firewall-offline-cmd --zone=public --add-port=80/tcp && \
+    firewall-offline-cmd --zone=public --add-port=443/tcp
+# NodePort range
+RUN firewall-offline-cmd --zone=public --add-port=30000-32767/tcp && \
+    firewall-offline-cmd --zone=public --add-port=30000-32767/udp
+# Pod and metadata networks (trusted)
+RUN firewall-offline-cmd --zone=trusted --add-source=10.42.0.0/16 && \
+    firewall-offline-cmd --zone=trusted --add-source=169.254.169.1 && \
+    firewall-offline-cmd --zone=trusted --add-source=fd01::/48
+
+# ---------------------------------------------------------------------------
+# MicroShift configuration
+# ---------------------------------------------------------------------------
+# Base domain for routes — matches nip.io pattern used by MINC
+COPY images/config/microshift-config.yaml /etc/microshift/config.yaml
+
+# ---------------------------------------------------------------------------
+# CRI-O / Podman shared storage
+# ---------------------------------------------------------------------------
+# Both CRI-O and Podman share /var/lib/containers/storage by default.
+# No extra configuration needed — they use the same containers/storage library.
+
+# ---------------------------------------------------------------------------
+# SSH configuration
+# ---------------------------------------------------------------------------
+# SSH: key-only auth, no passwords. Keys injected via Ignition at first boot.
+RUN sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
+
+# Create 'core' user (standard for bootc/CoreOS systems)
+RUN useradd -m -G wheel core && \
+    echo "core ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/core && \
+    chmod 440 /etc/sudoers.d/core && \
+    mkdir -p /home/core/.ssh && \
+    chmod 700 /home/core/.ssh && \
+    chown -R core:core /home/core/.ssh
+
+# ---------------------------------------------------------------------------
+# Registry mirror configuration (for Konflux dev images)
+# ---------------------------------------------------------------------------
+COPY config/registries/999-konflux-mirror.conf /etc/containers/registries.conf.d/
+
+# ---------------------------------------------------------------------------
+# Image signature policy (allow unsigned dev images)
+# ---------------------------------------------------------------------------
+COPY images/config/policy.json /etc/containers/policy.json
+
+# ---------------------------------------------------------------------------
+# Labels
+# ---------------------------------------------------------------------------
+LABEL name="aap-lab-vm" \
+      summary="AAP Lab VM Image — RHEL 9 + MicroShift" \
+      description="Bootable RHEL 9 image with MicroShift, Podman, and CRI-O for AAP development" \
+      io.k8s.display-name="AAP Lab VM" \
+      maintainer="aknochow@redhat.com"

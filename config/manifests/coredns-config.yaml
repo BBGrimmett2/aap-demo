@@ -1,0 +1,17 @@
+# CoreDNS configuration for nip.io resolution
+#
+# NOTE: This manifest requires the router ClusterIP which is dynamic.
+# It cannot be applied via MicroShift's manifest auto-loading because
+# the router service doesn't exist until after MicroShift starts.
+#
+# Use setup-coredns.sh instead, which:
+# 1. Waits for the router service to be available
+# 2. Gets the dynamic ClusterIP
+# 3. Patches the CoreDNS ConfigMap with the correct IP
+#
+# This file is kept here for documentation purposes only.
+# The actual CoreDNS configuration is applied by dev/aap-demo/setup-coredns.sh
+---
+# Placeholder - see setup-coredns.sh for actual implementation
+# The CoreDNS Corefile needs the router ClusterIP (e.g., 10.43.1.118)
+# which is only known after the cluster is running.

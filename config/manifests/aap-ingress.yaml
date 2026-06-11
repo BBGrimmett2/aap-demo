@@ -1,0 +1,51 @@
+# AAP Gateway Ingress for Lab/External Clusters
+#
+# Use this template when deploying AAP with ingress_type: none on vanilla K8s clusters.
+# The AAP operator does not create Ingress resources - you must create one manually.
+#
+# Required substitutions:
+#   __AAP_HOSTNAME__ - External hostname where AAP will be accessed
+#   __AAP_NAMESPACE__ - Namespace where AAP is deployed (default: aap-operator)
+#
+# Usage:
+#   1. Deploy AAP with ingress_type: none and matching public_base_url
+#   2. Wait for aap-gateway pod to be running
+#   3. Apply this ingress: kubectl apply -f aap-ingress.yaml
+#
+# Prerequisites:
+#   - An ingress controller must be running in the cluster (traefik, nginx, etc.)
+#   - DNS or /etc/hosts entry pointing __AAP_HOSTNAME__ to the ingress controller
+#   - For TLS, add tls section or use cert-manager annotations
+#
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aap-gateway
+  namespace: __AAP_NAMESPACE__
+  annotations:
+    # Uncomment for nginx ingress controller
+    # kubernetes.io/ingress.class: nginx
+    # nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    # nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    #
+    # Uncomment for traefik ingress controller
+    # kubernetes.io/ingress.class: traefik
+    # traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+spec:
+  rules:
+  - host: __AAP_HOSTNAME__
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: aap
+            port:
+              number: 80
+  # Uncomment to enable TLS (requires cert-manager or pre-created secret)
+  # tls:
+  # - hosts:
+  #   - __AAP_HOSTNAME__
+  #   secretName: aap-gateway-tls

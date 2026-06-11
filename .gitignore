@@ -1,0 +1,9 @@
+cache/
+output/
+artifacts/
+*.raw
+.DS_Store
+*.xml
+tsd.json
+test/testing-framework/
+.claude/skills/*/evals/workspace/
