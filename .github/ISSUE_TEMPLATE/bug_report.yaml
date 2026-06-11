@@ -1,13 +1,12 @@
 ---
 name: 🐛 Bug report
 description: Fill out this issue form to help us solve your problem
-title: "Bug report for Ansible Workshops"
+title: "Bug report for Ansible Automation Platform Demo"
 body:
   - type: markdown
     attributes:
       value: |
         Thank you for opening an issue!
-        If you are a Red Hat employee and a workshop did not provision correctly through RHPDS (Red Hat Product Demo System) please contact GPTE for support rhpds-help@redhat.com.
   - type: textarea
     validations:
       required: true
@@ -16,4 +15,4 @@ body:
       description: >-
         Describe the issue you are experiencing here to communicate to the
         maintainers. Tell us what you were trying to do and what happened.
-        Provide a clear and concise description of what the problem is.  Please paste subset of playbook output (The failing task) so we can priotize and try to start troubleshooting.
+        Provide a clear and concise description of what the problem is.  Please paste subset of playbook or command output so we can priotize and try to start troubleshooting.

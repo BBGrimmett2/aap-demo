@@ -1,6 +1,6 @@
 ---
 name: 📖 Documentation Issue
-description: problem with the Ansible Workshops documentation?
+description: problem with the Ansible Automation Platform Demo documentation?
 labels: ["type: documentation"]
 body:
   - type: dropdown
